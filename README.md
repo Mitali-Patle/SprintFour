@@ -5,6 +5,10 @@ A reviewer-first PII redaction triage tool. The bottleneck for a human reviewer
 documents that actually need a human (including ones where the detector may have
 **missed** real PII) and lets her clear the rest without opening them.
 
+## Demo
+
+▶️ **[Watch the demo](https://youtu.be/tnbrmfc5oHg)**
+
 ## How it works
 
 Every document is scanned by two independent passes at dataset-generation time:
@@ -128,7 +132,3 @@ dashboard without opening them.
 | POST   | `/api/documents/:id/finalize`                  | Finalize review → Cleared (409 if pending) |
 | POST   | `/api/documents/bulk-clear`                    | Bulk-clear low-risk documents              |
 | GET    | `/api/audit`                                   | Read the audit log                         |
-
-> Data is held in memory and resets to the on-disk `dataset.json` on each backend
-> restart — there is no database, real upload, or persistence of review actions
-> beyond the append-only audit log.
