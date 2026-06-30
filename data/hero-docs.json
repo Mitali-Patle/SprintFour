@@ -1,0 +1,420 @@
+[
+  {
+    "id": "doc_H01",
+    "title": "Medical Report – James Whitmore – Riverside Medical Center",
+    "category": "medical_report",
+    "text": "CONFIDENTIAL MEDICAL REPORT\nRiverside Medical Center\n1 Medical Center Drive, Boston, MA 02114\n\nPatient Name:       James Whitmore\nDate of Birth:      1971-03-14\nSSN on File:        523614490\nInsurance ID:       INS-748291\nTreating Physician: Dr. Diane Okafor\nVisit Date:         2024-02-08\n\nPRIMARY DIAGNOSIS\nMr. Whitmore presents with Stage 1 hypertension and chronic lumbar disc compression\nat L4–L5. Symptoms have persisted for approximately three years with progressive\nseverity, particularly following prolonged sitting or physical exertion.\n\nSECONDARY FINDINGS\nElevated LDL cholesterol (218 mg/dL) noted during routine bloodwork in January 2024.\nPatient reports an average of fewer than five hours of sleep nightly.\n\nCONTACT INFORMATION\nPhone:   (617) 834-2291\nEmail:   j.whitmore@bostonlaw.com\nAddress: 14 Beacon St, Boston, MA 02108\n\nTREATMENT PLAN\nMedications: lisinopril 10mg once daily; atorvastatin 20mg at bedtime.\nPhysical therapy: twice weekly for eight weeks (PT referral attached).\nFollow-up appointment: six weeks from today at Riverside Medical Center.\n\nRECORDS REQUEST\nAll records requests require a signed HIPAA Authorization (Form RM-401).\nContact the Health Information Management department for assistance.\n\nCONFIDENTIALITY NOTICE\nThis document contains Protected Health Information (PHI) under HIPAA §164.\nUnauthorized access, use, or disclosure is a federal offense punishable by law.",
+    "status": "red",
+    "confidence": 0.4,
+    "tierReason": "flagged: possible missed ssn",
+    "spans": [
+      {
+        "spanId": "doc_H01_s6",
+        "entityId": null,
+        "type": "ADDRESS",
+        "text": "1 Medical Center Drive, Boston, MA 02114",
+        "start": 53,
+        "end": 93,
+        "confidence": 0.771,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H01_s3",
+        "entityId": "ent_james_whitmore_name",
+        "type": "NAME",
+        "text": "James Whitmore",
+        "start": 115,
+        "end": 129,
+        "confidence": 0.84,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H01_s4",
+        "entityId": null,
+        "type": "NAME",
+        "text": "Dr. Diane Okafor",
+        "start": 242,
+        "end": 258,
+        "confidence": 0.743,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H01_s5",
+        "entityId": "ent_james_whitmore_name",
+        "type": "NAME",
+        "text": "Mr. Whitmore",
+        "start": 309,
+        "end": 321,
+        "confidence": 0.776,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H01_s2",
+        "entityId": "ent_james_whitmore_phone",
+        "type": "PHONE",
+        "text": "(617) 834-2291",
+        "start": 752,
+        "end": 766,
+        "confidence": 0.816,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H01_s1",
+        "entityId": "ent_james_whitmore_email",
+        "type": "EMAIL",
+        "text": "j.whitmore@bostonlaw.com",
+        "start": 776,
+        "end": 800,
+        "confidence": 0.888,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H01_s7",
+        "entityId": "ent_james_whitmore_addr",
+        "type": "ADDRESS",
+        "text": "14 Beacon St, Boston, MA 02108",
+        "start": 810,
+        "end": 840,
+        "confidence": 0.762,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H01_r8",
+        "entityId": "ent_james_whitmore_ssn",
+        "type": "SSN",
+        "text": "523614490",
+        "start": 181,
+        "end": 190,
+        "confidence": null,
+        "source": "recall",
+        "reviewStatus": "pending"
+      }
+    ]
+  },
+  {
+    "id": "doc_H02",
+    "title": "Employment Contract – Rachel Torres / Nova Media Inc",
+    "category": "employment_contract",
+    "text": "EMPLOYMENT AGREEMENT\n\nThis agreement is entered into as of 2024-01-15 between Nova Media Inc (\"Employer\")\nand Rachel Torres (\"Employee\").\n\n1. POSITION\n   Title:       Senior Content Strategist\n   Department:  Marketing & Brand\n   Start Date:  2024-02-03\n   Work Mode:   Hybrid — Chicago, IL office (3 days on-site per week)\n\n2. PERSONAL DETAILS\n   Full Name:              Rachel Torres\n   Social Security Number: 381-74-9920\n   Primary Email:          rachel.torres@novamedia.io\n   Work Phone (cell):      312-504-7823\n   Home Address:           55 Michigan Ave, Chicago, IL 60601\n\n3. COMPENSATION\n   Base Salary:    $92,000 per year, paid bi-weekly via direct deposit.\n   Signing Bonus:  $5,000 (subject to 12-month clawback upon early separation).\n   Annual Bonus:   Up to 15% of base salary, based on individual and company performance.\n   Benefits:       Medical, dental, vision; 20 days PTO; 401(k) with 5% employer match.\n\n4. INTELLECTUAL PROPERTY\n   All work product created in connection with employment belongs exclusively\n   to Employer. Employee hereby irrevocably assigns all IP rights to Employer.\n\n5. NON-COMPETE\n   Employee agrees not to accept employment with a direct competitor within\n   twelve (12) months of separation. Geographic scope: United States.\n   This clause is subject to applicable state and local law.\n\n6. TERMINATION\n   Either party may terminate with 30 days' written notice.\n   Employer may terminate for cause (material breach, fraud, gross misconduct) immediately.\n\nSignature (Employee):  _________________________   Date: ________\nSignature (Employer):  _________________________   Date: ________",
+    "status": "yellow",
+    "confidence": 0.597,
+    "tierReason": "flagged: possible missed phone",
+    "spans": [
+      {
+        "spanId": "doc_H02_s3",
+        "entityId": "ent_rachel_torres_name",
+        "type": "NAME",
+        "text": "Rachel Torres",
+        "start": 372,
+        "end": 385,
+        "confidence": 0.828,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H02_s1",
+        "entityId": "ent_rachel_torres_ssn",
+        "type": "SSN",
+        "text": "381-74-9920",
+        "start": 413,
+        "end": 424,
+        "confidence": 0.925,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H02_s2",
+        "entityId": "ent_rachel_torres_email",
+        "type": "EMAIL",
+        "text": "rachel.torres@novamedia.io",
+        "start": 452,
+        "end": 478,
+        "confidence": 0.865,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H02_s4",
+        "entityId": "ent_rachel_torres_addr",
+        "type": "ADDRESS",
+        "text": "55 Michigan Ave, Chicago, IL 60601",
+        "start": 546,
+        "end": 580,
+        "confidence": 0.794,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H02_r5",
+        "entityId": "ent_rachel_torres_phone",
+        "type": "PHONE",
+        "text": "312-504-7823",
+        "start": 506,
+        "end": 518,
+        "confidence": null,
+        "source": "recall",
+        "reviewStatus": "pending"
+      }
+    ]
+  },
+  {
+    "id": "doc_H03",
+    "title": "Court Affidavit – Samuel Kim – Case 2023-CV-48821",
+    "category": "court_affidavit",
+    "text": "AFFIDAVIT OF SAMUEL KIM\n\nSuperior Court of California\nCASE NO.: 2023-CV-48821\nPresiding: Hon. Patricia Moore\n\nI, Samuel Kim, being duly sworn under penalty of perjury, state as follows:\n\n1. IDENTIFICATION\n   Full Legal Name:           Samuel Kim\n   Date of Birth:             1985-09-22\n   Social Security Number:    209-47-8831\n   Current Address:           330 Market St, San Francisco, CA 94105\n\n2. BACKGROUND\n   I am a licensed securities trader with TradeStation Capital LLC, where I have\n   been employed for seven years and am in good standing with FINRA.\n\n3. STATEMENT OF FACTS\n   On or about August 14, 2023, I reviewed the financial disclosures at issue in\n   this proceeding. I have firsthand knowledge of the transactions described therein\n   and can attest to their accuracy and completeness.\n   The disclosures were prepared in accordance with SEC Rule 10b-5 and were filed\n   timely with the Securities and Exchange Commission.\n\n4. CONTACT\n   I may be reached at samuel.kim@tradestation.com or by telephone at (415) 772-4410.\n   All formal correspondence should be directed through my counsel at\n   Harrington & Cole, LLP, San Francisco, CA.\n\n5. DECLARATION\n   I declare under penalty of perjury under the laws of the State of California\n   that the foregoing is true and correct to the best of my knowledge.\n\nExecuted this 3rd day of October, 2023.\n\nSignature of Affiant: ________________________\nNotary Public:        ______________________________\nCommission Expires:   December 31, 2025",
+    "status": "green",
+    "confidence": 0.829,
+    "tierReason": "clear: 5 high-confidence entityies detected",
+    "spans": [
+      {
+        "spanId": "doc_H03_s4",
+        "entityId": "ent_samuel_kim_name",
+        "type": "NAME",
+        "text": "Samuel Kim",
+        "start": 235,
+        "end": 245,
+        "confidence": 0.765,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H03_s1",
+        "entityId": "ent_samuel_kim_ssn",
+        "type": "SSN",
+        "text": "209-47-8831",
+        "start": 317,
+        "end": 328,
+        "confidence": 0.914,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H03_s5",
+        "entityId": "ent_samuel_kim_addr",
+        "type": "ADDRESS",
+        "text": "330 Market St, San Francisco, CA 94105",
+        "start": 359,
+        "end": 397,
+        "confidence": 0.805,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H03_s2",
+        "entityId": "ent_samuel_kim_email",
+        "type": "EMAIL",
+        "text": "samuel.kim@tradestation.com",
+        "start": 978,
+        "end": 1005,
+        "confidence": 0.851,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H03_s3",
+        "entityId": "ent_samuel_kim_phone",
+        "type": "PHONE",
+        "text": "(415) 772-4410",
+        "start": 1025,
+        "end": 1039,
+        "confidence": 0.809,
+        "source": "detector",
+        "reviewStatus": "pending"
+      }
+    ]
+  },
+  {
+    "id": "doc_H04",
+    "title": "Lease Agreement – Diana Patel – 88 Desert View Rd, Phoenix, AZ 85021",
+    "category": "lease_agreement",
+    "text": "RESIDENTIAL LEASE AGREEMENT\n\nLandlord:         SunRise Realty Group\nTenant:           Diana Patel\nProperty Address: 88 Desert View Rd, Phoenix, AZ 85021\n\nLEASE TERM\nCommences: 2024-03-01. Term: twelve (12) months.\nAuto-renews month-to-month unless 60-day written notice given.\n\nFINANCIAL TERMS\nMonthly Rent:     $1,650.00, due on the 1st of each calendar month.\nSecurity Deposit: $2,475.00 (1.5× monthly rent; refundable per ARS §33-1321).\nLate Fee:         $100.00 if rent received after the 5-day grace period.\nNSF Fee:          $35.00 for returned checks or failed ACH transfers.\n\nTENANT IDENTIFICATION\nFull Name:        Diana Patel\nTax ID / SSN:     714336652\nContact Phone:    602-881-5500\nContact Email:    dpatel@sunrealty.net\nPrior Address:    200 Central Ave, Phoenix, AZ 85004\n\nUTILITY RESPONSIBILITIES\nTenant:   electric, gas, internet/cable, renter's insurance ($100K liability minimum).\nLandlord: water, trash, pest control, common-area maintenance.\n\nPROPERTY CARE\nTenant shall maintain the property in clean, habitable condition.\nNo structural modifications without prior written consent from Landlord.\nNo smoking or vaping on the premises, including patios and balconies.\n\nLANDLORD ENTRY\nLandlord shall provide 24 hours' advance notice before entry, except in emergencies.\n\nEARLY TERMINATION\nTenant may terminate early with 60 days' written notice and a fee equal to\ntwo (2) months' rent, which serves as liquidated damages.\n\nTenant Signature: ______________________   Date: ________\nLandlord Signature: ____________________   Date: ________\nSunRise Realty Representative:              Date: ________",
+    "status": "red",
+    "confidence": 0.397,
+    "tierReason": "flagged: possible missed ssn",
+    "spans": [
+      {
+        "spanId": "doc_H04_s2",
+        "entityId": "ent_diana_patel_name",
+        "type": "NAME",
+        "text": "Diana Patel",
+        "start": 86,
+        "end": 97,
+        "confidence": 0.838,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H04_s4",
+        "entityId": "ent_diana_patel_addr",
+        "type": "ADDRESS",
+        "text": "88 Desert View Rd, Phoenix, AZ 85021",
+        "start": 116,
+        "end": 152,
+        "confidence": 0.721,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H04_s3",
+        "entityId": "ent_diana_patel_name",
+        "type": "NAME",
+        "text": "Diana Patel",
+        "start": 624,
+        "end": 635,
+        "confidence": 0.754,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H04_s1",
+        "entityId": "ent_diana_patel_email",
+        "type": "EMAIL",
+        "text": "dpatel@sunrealty.net",
+        "start": 713,
+        "end": 733,
+        "confidence": 0.859,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H04_s5",
+        "entityId": null,
+        "type": "ADDRESS",
+        "text": "200 Central Ave, Phoenix, AZ 85004",
+        "start": 752,
+        "end": 786,
+        "confidence": 0.8,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H04_r7",
+        "entityId": "ent_diana_patel_ssn",
+        "type": "SSN",
+        "text": "714336652",
+        "start": 654,
+        "end": 663,
+        "confidence": null,
+        "source": "recall",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H04_r6",
+        "entityId": "ent_diana_patel_phone",
+        "type": "PHONE",
+        "text": "602-881-5500",
+        "start": 682,
+        "end": 694,
+        "confidence": null,
+        "source": "recall",
+        "reviewStatus": "pending"
+      }
+    ]
+  },
+  {
+    "id": "doc_H05",
+    "title": "Financial Invoice – Meridian Compliance Partners – INV-88421",
+    "category": "financial_invoice",
+    "text": "INVOICE\n\nInvoice Number: INV-88421\nInvoice Date:   2024-02-29\nPayment Terms:  Net 30\nProject Ref:    QFUND-2024-Q1-REVIEW\nCurrency:       USD\n\nBILLED TO:\nChen Wei\n7 Innovation Way, Seattle, WA 98109\nEmail:  chen.wei@quantumfund.io\nPhone:  425.663.8847\nTax ID: 463-58-1190\n\nBILLED FROM:\nMeridian Compliance Partners\n200 Park Avenue, New York, NY 10166\nbilling@meridiancp.com\n\nSERVICES RENDERED:\nQ1 2024 Investment Portfolio Compliance Review\n  — Full review of 38 equity and fixed-income positions across three managed funds\n  — Regulatory filing support (Form ADV Amendment, Schedule 13G)\n  — Risk exposure analysis and remediation recommendations report\n  — Two (2) rounds of attorney review and comment\n\nSUBTOTAL:  $12,400.00\nTAX (8%):  $   992.00\nTOTAL DUE: $13,392.00\n\nPAYMENT INSTRUCTIONS:\nBank:             JPMorgan Chase\nAccount (masked): ****-7741\nReference:        Chen_Wei_Q1_2024\n\nLate payments accrue interest at 1.5% per month.\nQuestions? Contact billing@meridiancp.com",
+    "status": "yellow",
+    "confidence": 0.603,
+    "tierReason": "flagged: possible missed phone",
+    "spans": [
+      {
+        "spanId": "doc_H05_s5",
+        "entityId": "ent_chen_wei_name",
+        "type": "NAME",
+        "text": "Chen Wei",
+        "start": 154,
+        "end": 162,
+        "confidence": 0.813,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H05_s6",
+        "entityId": "ent_chen_wei_addr",
+        "type": "ADDRESS",
+        "text": "7 Innovation Way, Seattle, WA 98109",
+        "start": 163,
+        "end": 198,
+        "confidence": 0.771,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H05_s2",
+        "entityId": "ent_chen_wei_email",
+        "type": "EMAIL",
+        "text": "chen.wei@quantumfund.io",
+        "start": 207,
+        "end": 230,
+        "confidence": 0.93,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H05_s1",
+        "entityId": "ent_chen_wei_ssn",
+        "type": "SSN",
+        "text": "463-58-1190",
+        "start": 260,
+        "end": 271,
+        "confidence": 0.943,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H05_s7",
+        "entityId": null,
+        "type": "ADDRESS",
+        "text": "200 Park Avenue, New York, NY 10166",
+        "start": 315,
+        "end": 350,
+        "confidence": 0.782,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H05_s3",
+        "entityId": null,
+        "type": "EMAIL",
+        "text": "billing@meridiancp.com",
+        "start": 351,
+        "end": 373,
+        "confidence": 0.929,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H05_s4",
+        "entityId": null,
+        "type": "EMAIL",
+        "text": "billing@meridiancp.com",
+        "start": 960,
+        "end": 982,
+        "confidence": 0.865,
+        "source": "detector",
+        "reviewStatus": "pending"
+      },
+      {
+        "spanId": "doc_H05_r8",
+        "entityId": "ent_chen_wei_phone",
+        "type": "PHONE",
+        "text": "425.663.8847",
+        "start": 239,
+        "end": 251,
+        "confidence": null,
+        "source": "recall",
+        "reviewStatus": "pending"
+      }
+    ]
+  }
+]
