@@ -1,29 +1,17 @@
 import SuggestionItem from './SuggestionItem';
+import { isPending, orderSuggestions } from '../lib/suggestions';
+import { plural } from '../lib/meta';
 
-// Recall (possible miss) first; within each source, lower confidence first.
-function sortPending(spans) {
-  return [...spans].sort((a, b) => {
-    if (a.source !== b.source) return a.source === 'recall' ? -1 : 1;
-    const ca = a.confidence ?? -1;
-    const cb = b.confidence ?? -1;
-    return ca - cb;
-  });
-}
-
-export default function SuggestionList({
-  spans,
-  activeSpanId,
-  onActivate,
-  onAction,
-  onPropagate,
-}) {
-  const pending  = sortPending(spans.filter(s => s.reviewStatus === 'pending'));
-  const reviewed = spans.filter(s => s.reviewStatus !== 'pending');
+export default function SuggestionList({ spans, activeSpanId, readOnly, busy, onActivate, onAction, onPropagate }) {
+  const pending  = orderSuggestions(spans.filter(isPending));
+  const reviewed = spans.filter(s => !isPending(s));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {pending.length === 0 && (
-        <p style={{ color: '#6b7280', fontSize: 14 }}>All spans reviewed.</p>
+        <p style={{ color: '#6b7280', fontSize: 14, margin: 0 }}>
+          {readOnly ? 'This document has been cleared.' : 'All suggestions reviewed. Press f to finalize.'}
+        </p>
       )}
 
       {pending.map(span => (
@@ -31,6 +19,8 @@ export default function SuggestionList({
           key={span.spanId}
           span={span}
           isActive={span.spanId === activeSpanId}
+          readOnly={readOnly}
+          busy={busy}
           onActivate={onActivate}
           onAction={onAction}
           onPropagate={onPropagate}
@@ -40,14 +30,19 @@ export default function SuggestionList({
       {reviewed.length > 0 && (
         <details style={{ marginTop: 8 }}>
           <summary style={{ fontSize: 13, color: '#6b7280', cursor: 'pointer' }}>
-            {reviewed.length} reviewed span{reviewed.length > 1 ? 's' : ''}
+            {plural(reviewed.length, 'reviewed span')}
           </summary>
-          {reviewed.map(span => (
-            <div key={span.spanId} style={{ fontSize: 13, padding: '4px 0', color: '#6b7280' }}>
-              <span style={{ textDecoration: 'line-through' }}>{span.text}</span>
-              {' '}— {span.reviewStatus}
-            </div>
-          ))}
+          <ul style={{ listStyle: 'none', padding: 0, margin: '6px 0 0' }}>
+            {reviewed.map(span => (
+              <li key={span.spanId} style={{ fontSize: 13, padding: '3px 0', color: '#6b7280' }}>
+                <span style={{ fontFamily: 'monospace' }}>{span.text}</span>
+                {' '}({span.type}):{' '}
+                <strong style={{ color: span.reviewStatus === 'accepted' ? '#15803d' : '#b91c1c' }}>
+                  {span.reviewStatus}
+                </strong>
+              </li>
+            ))}
+          </ul>
         </details>
       )}
     </div>

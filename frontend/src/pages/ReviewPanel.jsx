@@ -1,310 +1,214 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import SpanHighlighter from '../components/SpanHighlighter';
 import SuggestionList  from '../components/SuggestionList';
+import StatusBadge     from '../components/StatusBadge';
 import TierBadge       from '../components/TierBadge';
 import KeyboardHint    from '../components/KeyboardHint';
-import { fetchDocument, patchSpan, propagate, propagatePreview, finalizeDocument } from '../services/api';
+import PropagateModal  from '../components/PropagateModal';
+import Toast           from '../components/Toast';
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
+import { isPending, orderSuggestions } from '../lib/suggestions';
+import { plural } from '../lib/meta';
+import {
+  fetchDocument, fetchNextDocId, finalizeDocument, propagate, reviewSpan,
+} from '../services/api';
+
+const firstPendingId = spans => orderSuggestions(spans.filter(isPending))[0]?.spanId ?? null;
 
 export default function ReviewPanel() {
   const { id }   = useParams();
   const navigate = useNavigate();
 
   const [doc,          setDoc]          = useState(null);
+  const [loadError,    setLoadError]    = useState(null);
   const [activeSpanId, setActiveSpanId] = useState(null);
-  const [propagateFor, setPropagateFor] = useState(null); // span awaiting propagation confirm
-  const [loading,      setLoading]      = useState(true);
+  const [propagateFor, setPropagateFor] = useState(null);
+  const [busy,         setBusy]         = useState(false);
   const [toast,        setToast]        = useState(null);
 
-  useEffect(() => { load(); }, [id]);
+  const notify = useCallback((msg, tone = 'success') => setToast({ msg, tone, at: Date.now() }), []);
 
-  async function load() {
-    setLoading(true);
-    const data = await fetchDocument(id);
-    setDoc(data);
-    const firstPending = data.spans.find(s => s.reviewStatus === 'pending');
-    setActiveSpanId(firstPending?.spanId ?? null);
-    setLoading(false);
-  }
+  // The route keys this component by document id, so all state starts fresh per document.
+  const load = useCallback(() =>
+    fetchDocument(id).then(
+      data => {
+        setDoc(data);
+        setLoadError(null);
+        setActiveSpanId(current =>
+          data.spans.some(s => s.spanId === current && isPending(s)) ? current : firstPendingId(data.spans));
+      },
+      e => setLoadError(e),
+    ), [id]);
 
-  function showToast(msg, color = '#16a34a') {
-    setToast({ msg, color });
-    setTimeout(() => setToast(null), 2500);
-  }
+  useEffect(() => { load(); }, [load]);
+
+  const readOnly = doc?.workflowStatus === 'cleared';
+  const pending  = doc ? orderSuggestions(doc.spans.filter(isPending)) : [];
 
   async function handleAction(span, action) {
-    await patchSpan(doc.id, span.spanId, action);
-    setDoc(prev => ({
-      ...prev,
-      spans: prev.spans.map(s =>
-        s.spanId === span.spanId ? { ...s, reviewStatus: action === 'accept' ? 'accepted' : 'rejected' } : s
-      ),
-    }));
-    showToast(`${action === 'accept' ? 'Accepted' : 'Rejected'}: "${span.text}"`, action === 'accept' ? '#16a34a' : '#dc2626');
-    // Auto-advance to next pending span
-    const remaining = doc.spans.filter(s => s.reviewStatus === 'pending' && s.spanId !== span.spanId);
-    setActiveSpanId(remaining[0]?.spanId ?? null);
-  }
-
-  async function handlePropagate(span) {
-    setPropagateFor(span);
+    if (busy || readOnly) return;
+    setBusy(true);
+    try {
+      const res = await reviewSpan(doc.id, span.spanId, action);
+      const spans = doc.spans.map(s => (s.spanId === span.spanId ? res.span : s));
+      setDoc({ ...doc, spans, workflowStatus: res.workflowStatus });
+      setActiveSpanId(firstPendingId(spans));
+      notify(`${action === 'accept' ? 'Accepted' : 'Rejected'}: “${span.text}”`, action === 'accept' ? 'success' : 'danger');
+    } catch (e) {
+      notify(e.message, 'danger');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function confirmPropagate(span, action) {
-    const result = await propagate(doc.id, span.entityId, action);
-    setPropagateFor(null);
-    showToast(`Applied "${action}" to ${result.affected.length} span(s) across all documents.`);
-    load(); // reload to reflect propagated changes
+    setBusy(true);
+    try {
+      const result = await propagate(doc.id, span.entityId, action);
+      setPropagateFor(null);
+      notify(`Applied “${action}” to ${plural(result.affected.length, 'span')} across documents.`);
+      await load();
+    } catch (e) {
+      notify(e.message, 'danger');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function goToNextDocument() {
+    try {
+      const nextId = await fetchNextDocId(doc.id);
+      if (nextId) navigate(`/review/${nextId}`);
+      else navigate('/', { state: { notice: 'Queue empty. Every document has been cleared.' } });
+    } catch (e) {
+      notify(e.message, 'danger');
+    }
   }
 
   async function handleFinalize() {
-    const pending = doc.spans.filter(s => s.reviewStatus === 'pending').length;
-    if (pending > 0) {
-      showToast(`Review all ${pending} suggestion${pending > 1 ? 's' : ''} before finalizing.`, '#d97706');
+    if (busy || readOnly) return;
+    if (pending.length > 0) {
+      notify(`Review all ${plural(pending.length, 'suggestion')} before finalizing.`, 'warning');
       return;
     }
+    setBusy(true);
     try {
       await finalizeDocument(doc.id);
-      navigate('/'); // back to dashboard; stats reflect the new Cleared status
+      notify('Document cleared.');
+      await goToNextDocument();
     } catch (e) {
-      showToast(e.message, '#dc2626');
+      notify(e.message, 'danger');
+    } finally {
+      setBusy(false);
     }
   }
 
-  // Keyboard shortcuts: a=accept, r=reject, n=next doc
-  const handleKey = useCallback((e) => {
-    if (propagateFor || !doc) return;
-    const tag = e.target.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+  function moveActive(step) {
+    if (pending.length === 0) return;
+    const i = pending.findIndex(s => s.spanId === activeSpanId);
+    const next = (i + step + pending.length) % pending.length;
+    setActiveSpanId(pending[next].spanId);
+  }
 
-    const activeSpan = doc.spans.find(s => s.spanId === activeSpanId);
+  const activeSpan = pending.find(s => s.spanId === activeSpanId);
 
-    if (e.key === 'a' && activeSpan) { e.preventDefault(); handleAction(activeSpan, 'accept'); }
-    if (e.key === 'r' && activeSpan) { e.preventDefault(); handleAction(activeSpan, 'reject'); }
-    if (e.key === 'n')               { e.preventDefault(); navigate('/'); }
-    if (e.key === 'f')               { e.preventDefault(); handleFinalize(); }
-  }, [doc, activeSpanId, propagateFor]);
+  useKeyboardShortcuts({
+    a:      () => activeSpan && handleAction(activeSpan, 'accept'),
+    r:      () => activeSpan && handleAction(activeSpan, 'reject'),
+    j:      () => moveActive(1),
+    k:      () => moveActive(-1),
+    f:      () => handleFinalize(),
+    n:      () => goToNextDocument(),
+    escape: () => navigate('/'),
+  }, Boolean(doc) && !propagateFor);
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [handleKey]);
+  if (loadError) {
+    return (
+      <main className="page">
+        <BackLink />
+        <p className="error-text" role="alert">
+          {loadError.status === 404 ? 'Document not found.' : `Couldn’t load document: ${loadError.message}`}
+        </p>
+        {loadError.status !== 404 && <button type="button" className="btn" onClick={load}>Retry</button>}
+      </main>
+    );
+  }
 
-  if (loading) return <Layout><p style={{ color: '#6b7280' }}>Loading…</p></Layout>;
-  if (!doc)    return <Layout><p style={{ color: '#dc2626' }}>Document not found.</p></Layout>;
+  if (!doc) return <main className="page"><p className="muted">Loading…</p></main>;
 
   return (
-    <Layout>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{ fontSize: 13, background: 'none', border: '1px solid #d1d5db', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: '#374151' }}
-        >
-          ← Dashboard
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {doc.title}
-          </h1>
-        </div>
-        <TierBadge status={doc.workflowStatus} reason={doc.tierReason} />
-        <FinalizeButton
-          pending={doc.spans.filter(s => s.reviewStatus === 'pending').length}
-          cleared={doc.workflowStatus === 'cleared'}
-          onFinalize={handleFinalize}
-        />
+    <main className="page page-wide">
+      <header className="review-header">
+        <BackLink />
+        <h1 className="review-title" title={doc.title}>{doc.title}</h1>
+        <StatusBadge status={doc.workflowStatus} />
+        <FinalizeButton pending={pending.length} cleared={readOnly} busy={busy} onFinalize={handleFinalize} />
+      </header>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '0 0 12px' }}>
+        <TierBadge tier={doc.tier} reason={doc.tierReason} />
       </div>
 
       <KeyboardHint />
 
-      {/* Two-panel layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24, alignItems: 'start' }}>
-        {/* Left: document text with highlights */}
-        <div style={{
-          border:     '1px solid #e5e7eb',
-          borderRadius: 8,
-          padding:    20,
-          background: '#fafafa',
-          overflowY:  'auto',
-          maxHeight:  'calc(100vh - 180px)',
-        }}>
+      <div className="review-grid">
+        <section className="panel panel-doc" aria-label="Document text">
           <SpanHighlighter
             text={doc.text}
             spans={doc.spans}
             activeSpanId={activeSpanId}
             onSpanClick={span => setActiveSpanId(span.spanId)}
           />
-        </div>
+        </section>
 
-        {/* Right: suggestion list */}
-        <div style={{
-          border:     '1px solid #e5e7eb',
-          borderRadius: 8,
-          padding:    16,
-          background: '#fff',
-          overflowY:  'auto',
-          maxHeight:  'calc(100vh - 180px)',
-        }}>
-          <h2 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 600, color: '#111827' }}>
-            AI Suggestions
-            <span style={{ fontWeight: 400, fontSize: 13, color: '#6b7280', marginLeft: 8 }}>
-              {doc.spans.filter(s => s.reviewStatus === 'pending').length} pending
-            </span>
+        <section className="panel" aria-label="Suggestions">
+          <h2 className="panel-title">
+            AI Suggestions <span className="muted" style={{ fontWeight: 400 }}>{pending.length} pending</span>
           </h2>
           <SuggestionList
             spans={doc.spans}
             activeSpanId={activeSpanId}
+            readOnly={readOnly}
+            busy={busy}
             onActivate={setActiveSpanId}
             onAction={handleAction}
-            onPropagate={handlePropagate}
+            onPropagate={setPropagateFor}
           />
-        </div>
+        </section>
       </div>
 
-      {/* Propagation confirmation modal */}
       {propagateFor && (
         <PropagateModal
           docId={doc.id}
           span={propagateFor}
+          busy={busy}
           onConfirm={confirmPropagate}
           onCancel={() => setPropagateFor(null)}
         />
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position:  'fixed', bottom: 24, right: 24,
-          background: toast.color, color: '#fff',
-          padding: '10px 20px', borderRadius: 8,
-          fontSize: 14, fontWeight: 500,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 999,
-        }}>
-          {toast.msg}
-        </div>
-      )}
-    </Layout>
+      <Toast toast={toast} onDone={() => setToast(null)} />
+    </main>
   );
 }
 
-function FinalizeButton({ pending, cleared, onFinalize }) {
-  if (cleared) {
-    return (
-      <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600, whiteSpace: 'nowrap' }}>
-        ✓ Finalized
-      </span>
-    );
-  }
+function BackLink() {
+  return <Link to="/" className="btn btn-ghost">← Dashboard</Link>;
+}
+
+function FinalizeButton({ pending, cleared, busy, onFinalize }) {
+  if (cleared) return <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600, whiteSpace: 'nowrap' }}>✓ Finalized</span>;
   const blocked = pending > 0;
   return (
     <button
+      type="button"
+      className="btn btn-primary"
       onClick={onFinalize}
-      disabled={blocked}
-      title={blocked ? `Review all ${pending} suggestion${pending > 1 ? 's' : ''} to finalize` : 'Finalize review (f)'}
-      style={{
-        padding:      '6px 14px',
-        borderRadius: 7,
-        border:       `1px solid ${blocked ? '#d1d5db' : '#16a34a'}`,
-        background:   blocked ? '#f3f4f6' : '#16a34a',
-        color:        blocked ? '#9ca3af' : '#fff',
-        fontSize:     13,
-        fontWeight:   600,
-        cursor:       blocked ? 'not-allowed' : 'pointer',
-        whiteSpace:   'nowrap',
-      }}
+      disabled={blocked || busy}
+      title={blocked ? `Review all ${plural(pending, 'suggestion')} to finalize` : 'Finalize review (f)'}
     >
-      Finalize Review {!blocked && '(f)'}
+      Finalize Review {!blocked && <kbd>f</kbd>}
     </button>
-  );
-}
-
-function PropagateModal({ docId, span, onConfirm, onCancel }) {
-  const [scope,  setScope]  = useState(null); // { docCount, spanTotal, spanPending }
-  const [error,  setError]  = useState(null);
-
-  useEffect(() => {
-    let live = true;
-    propagatePreview(docId, span.entityId)
-      .then(s => { if (live) setScope(s); })
-      .catch(e => { if (live) setError(e.message); });
-    return () => { live = false; };
-  }, [docId, span.entityId]);
-
-  // Nothing left to change — every matching span has already been reviewed.
-  const noop = scope && scope.spanPending === 0;
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-    }}>
-      <div style={{
-        background: '#fff', borderRadius: 12, padding: 28, maxWidth: 440, width: '90%',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-      }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Apply to all documents with this entity?</h3>
-
-        <p style={{ fontSize: 14, color: '#4b5563', margin: '0 0 14px' }}>
-          The entity <strong>&ldquo;{span.text}&rdquo;</strong> ({span.type}) is shared across
-          your documents. The action you choose is applied to every document where it appears.
-        </p>
-
-        {/* Scope — shown BEFORE the action so the blast radius is explicit. */}
-        <div style={{
-          background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8,
-          padding: '10px 14px', margin: '0 0 20px', fontSize: 13, color: '#374151',
-        }}>
-          {error && <span style={{ color: '#dc2626' }}>Couldn’t load scope: {error}</span>}
-          {!error && !scope && <span style={{ color: '#6b7280' }}>Calculating scope…</span>}
-          {!error && scope && (
-            noop ? (
-              <span>
-                Appears in <strong>{scope.docCount}</strong> document{scope.docCount === 1 ? '' : 's'},
-                but all matching spans have already been reviewed — nothing left to change.
-              </span>
-            ) : (
-              <span>
-                Will update <strong>{scope.spanPending}</strong> pending
-                span{scope.spanPending === 1 ? '' : 's'} across{' '}
-                <strong>{scope.docCount}</strong> document{scope.docCount === 1 ? '' : 's'}.
-              </span>
-            )
-          )}
-        </div>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            disabled={!scope || noop}
-            onClick={() => onConfirm(span, 'accept')}
-            style={{ flex: 1, padding: '8px', borderRadius: 7, border: '1px solid #16a34a', background: '#dcfce7', color: '#16a34a', fontWeight: 600, cursor: (!scope || noop) ? 'not-allowed' : 'pointer', opacity: (!scope || noop) ? 0.5 : 1, fontSize: 14 }}
-          >
-            Accept all
-          </button>
-          <button
-            disabled={!scope || noop}
-            onClick={() => onConfirm(span, 'reject')}
-            style={{ flex: 1, padding: '8px', borderRadius: 7, border: '1px solid #dc2626', background: '#fee2e2', color: '#dc2626', fontWeight: 600, cursor: (!scope || noop) ? 'not-allowed' : 'pointer', opacity: (!scope || noop) ? 0.5 : 1, fontSize: 14 }}
-          >
-            Reject all
-          </button>
-          <button
-            onClick={onCancel}
-            style={{ padding: '8px 16px', borderRadius: 7, border: '1px solid #d1d5db', background: '#f9fafb', color: '#374151', cursor: 'pointer', fontSize: 14 }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Layout({ children }) {
-  return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
-      {children}
-    </div>
   );
 }

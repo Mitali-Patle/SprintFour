@@ -1,45 +1,40 @@
 const BASE = '/api';
 
-async function req(url, opts) {
-  const r = await fetch(url, opts);
-  if (!r.ok) {
-    let msg = `${r.status} ${r.statusText}`;
-    try { const body = await r.json(); msg = body.error || msg; } catch { /* ignore */ }
-    throw new Error(msg);
+export class ApiError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
   }
-  return r.json();
 }
 
-export const fetchDocuments = ()          => req(`${BASE}/documents`);
-export const fetchDocument  = id          => req(`${BASE}/documents/${id}`);
-export const fetchAudit     = ()          => req(`${BASE}/audit`);
-
-export const patchSpan = (docId, spanId, action) =>
-  req(`${BASE}/documents/${docId}/spans/${spanId}`, {
-    method:  'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ action }),
+async function request(path, { method = 'GET', body } = {}) {
+  const res = await fetch(BASE + path, {
+    method,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body:    body === undefined ? undefined : JSON.stringify(body),
   });
+  let data = null;
+  try { data = await res.json(); } catch { /* empty or non-JSON body */ }
+  if (!res.ok) throw new ApiError(res.status, data?.error || `${res.status} ${res.statusText}`);
+  return data;
+}
+
+const enc = encodeURIComponent;
+
+export const fetchDocuments   = ()        => request('/documents');
+export const fetchDocument    = id        => request(`/documents/${enc(id)}`);
+export const fetchNextDocId   = id        => request(`/documents/${enc(id)}/next`).then(r => r.id);
+export const fetchAudit       = ()        => request('/audit');
+
+export const reviewSpan       = (docId, spanId, action) =>
+  request(`/documents/${enc(docId)}/spans/${enc(spanId)}`, { method: 'PATCH', body: { action } });
 
 export const propagatePreview = (docId, entityId) =>
-  req(`${BASE}/documents/${docId}/propagate?entityId=${encodeURIComponent(entityId)}`);
+  request(`/documents/${enc(docId)}/propagate?entityId=${enc(entityId)}`);
 
-export const propagate = (docId, entityId, action) =>
-  req(`${BASE}/documents/${docId}/propagate`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ entityId, action }),
-  });
+export const propagate        = (docId, entityId, action) =>
+  request(`/documents/${enc(docId)}/propagate`, { method: 'POST', body: { entityId, action } });
 
-export const finalizeDocument = id =>
-  req(`${BASE}/documents/${id}/finalize`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
+export const finalizeDocument = id  => request(`/documents/${enc(id)}/finalize`, { method: 'POST' });
 
-export const bulkClear = ids =>
-  req(`${BASE}/documents/bulk-clear`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ ids }),
-  });
+export const bulkClear        = ids => request('/documents/bulk-clear', { method: 'POST', body: { ids } });

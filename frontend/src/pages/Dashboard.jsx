@@ -1,122 +1,108 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import DocCard   from '../components/DocCard';
 import BulkClear from '../components/BulkClear';
-import { fetchDocuments, fetchAudit, bulkClear } from '../services/api';
+import Toast     from '../components/Toast';
+import { WORKFLOW_META, PALETTE, plural } from '../lib/meta';
+import { bulkClear, fetchAudit, fetchDocuments } from '../services/api';
 
 export default function Dashboard() {
-  const [docs,    setDocs]    = useState([]);
-  const [audit,   setAudit]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const location = useLocation();
+  const [docs,  setDocs]  = useState(null);
+  const [audit, setAudit] = useState([]);
+  const [error, setError] = useState(null);
+  const [toast, setToast] = useState(() =>
+    location.state?.notice ? { msg: location.state.notice, tone: 'success', at: Date.now() } : null);
 
-  useEffect(() => { load(); }, []);
+  const load = useCallback(() =>
+    Promise.all([fetchDocuments(), fetchAudit()]).then(
+      ([docData, auditData]) => { setDocs(docData); setAudit(auditData); setError(null); },
+      e => setError(e.message),
+    ), []);
 
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [docData, auditData] = await Promise.all([fetchDocuments(), fetchAudit()]);
-      setDocs(docData);
-      setAudit(auditData);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => { load(); }, [load]);
 
   async function handleBulkClear(ids) {
-    await bulkClear(ids);
-    load();
+    try {
+      const res = await bulkClear(ids);
+      const skipped = res.skipped.length ? `, ${res.skipped.length} skipped` : '';
+      setToast({ msg: `Cleared ${plural(res.cleared.length, 'document')}${skipped}.`, tone: 'success', at: Date.now() });
+    } catch (e) {
+      setToast({ msg: e.message, tone: 'danger', at: Date.now() });
+    }
+    await load();
   }
-
-  const active    = docs.filter(d => d.workflowStatus !== 'cleared');
-  // Low-risk (detection-green) docs not yet cleared — safe to bulk-clear unopened.
-  const greenSafe = docs.filter(d => d.status === 'green' && d.workflowStatus !== 'cleared');
-  const counts = {
-    needs_review: docs.filter(d => d.workflowStatus === 'needs_review').length,
-    in_progress:  docs.filter(d => d.workflowStatus === 'in_progress').length,
-    cleared:      docs.filter(d => d.workflowStatus === 'cleared').length,
-  };
-
-  if (loading) return <Layout><p style={{ color: '#6b7280' }}>Loading…</p></Layout>;
 
   if (error) {
     return (
-      <Layout>
-        <p style={{ color: '#ef4444' }}>Failed to load: {error}</p>
-        <button
-          onClick={load}
-          style={{ marginTop: 8, padding: '6px 14px', borderRadius: 6, border: '1px solid #d1d5db', cursor: 'pointer' }}
-        >
-          Retry
-        </button>
-      </Layout>
+      <main className="page">
+        <p className="error-text" role="alert">Failed to load: {error}</p>
+        <button type="button" className="btn" onClick={load}>Retry</button>
+      </main>
     );
   }
 
+  if (!docs) return <main className="page"><p className="muted">Loading…</p></main>;
+
+  const active    = docs.filter(d => d.workflowStatus !== 'cleared');
+  // Low-risk (green) documents nobody has touched can be cleared unopened.
+  const greenSafe = docs.filter(d => d.tier === 'green' && d.workflowStatus === 'needs_review');
+  const counts    = Object.fromEntries(Object.keys(WORKFLOW_META).map(k => [k, docs.filter(d => d.workflowStatus === k).length]));
+
   return (
-    <Layout>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>PII Triage Dashboard</h1>
-        <span style={{ fontSize: 13, color: '#6b7280' }}>{active.length} active</span>
-        <span style={{ fontSize: 13, color: '#ef4444', marginLeft: 'auto' }}>
-          {counts.needs_review} Needs Review
-        </span>
-        <span style={{ fontSize: 13, color: '#f59e0b' }}>
-          {counts.in_progress} In Progress
-        </span>
-        <span style={{ fontSize: 13, color: '#16a34a' }}>
-          {counts.cleared} Cleared
-        </span>
-      </div>
+    <main className="page">
+      <header className="dash-header">
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>PII Triage</h1>
+          <p className="muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+            {plural(active.length, 'document')} in the queue, riskiest first
+          </p>
+        </div>
+        <dl className="stat-row">
+          {Object.entries(WORKFLOW_META).map(([key, meta]) => (
+            <div key={key} className="stat">
+              <dt>{meta.label}</dt>
+              <dd style={{ color: PALETTE[meta.color].dot }}>{counts[key]}</dd>
+            </div>
+          ))}
+        </dl>
+      </header>
 
       <BulkClear greenDocs={greenSafe} onClear={handleBulkClear} />
 
-      <div style={{
-        display:               'grid',
-        gridTemplateColumns:   'repeat(auto-fill, minmax(300px, 1fr))',
-        gap:                   12,
-      }}>
-        {active.map(doc => (
-          <DocCard key={doc.id} doc={doc} />
-        ))}
-      </div>
-
-      {audit.length > 0 && (
-        <details style={{ marginTop: 32 }}>
-          <summary style={{ fontSize: 13, color: '#6b7280', cursor: 'pointer' }}>
-            Audit log ({audit.length} entries)
-          </summary>
-          <div style={{
-            fontFamily: 'monospace',
-            fontSize:   12,
-            marginTop:  8,
-            background: '#f9fafb',
-            padding:    12,
-            borderRadius: 6,
-            maxHeight:  200,
-            overflowY:  'auto',
-          }}>
-            {[...audit].reverse().map((entry, i) => (
-              <div key={i} style={{ color: '#374151', paddingBottom: 2 }}>
-                {entry.ts.slice(0, 19).replace('T', ' ')}&nbsp;&nbsp;
-                <strong>{entry.action}</strong>&nbsp;&nbsp;
-                {entry.docId}{entry.spanId ? ` / ${entry.spanId}` : ''}&nbsp;&nbsp;
-                [{entry.scope}]
-              </div>
-            ))}
+      {active.length === 0
+        ? <p className="muted">Nothing left to review. Every document is cleared.</p>
+        : (
+          <div className="doc-grid">
+            {active.map(doc => <DocCard key={doc.id} doc={doc} />)}
           </div>
-        </details>
-      )}
-    </Layout>
+        )}
+
+      {audit.length > 0 && <AuditLog entries={audit} />}
+
+      <Toast toast={toast} onDone={() => setToast(null)} />
+    </main>
   );
 }
 
-function Layout({ children }) {
+function AuditLog({ entries }) {
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px', fontFamily: 'system-ui, sans-serif' }}>
-      {children}
-    </div>
+    <details style={{ marginTop: 32 }}>
+      <summary className="muted" style={{ fontSize: 13, cursor: 'pointer' }}>
+        Audit log ({plural(entries.length, 'entry', 'entries')})
+      </summary>
+      <ol className="audit-log" reversed>
+        {[...entries].reverse().map((e, i) => (
+          <li key={`${e.ts}-${i}`}>
+            <time dateTime={e.ts}>{new Date(e.ts).toLocaleString()}</time>{'  '}
+            <strong>{e.action}</strong>{'  '}
+            {e.scope === 'propagate'
+              ? <>{e.entityId} → {plural(e.affected ?? 0, 'span')}</>
+              : <>{e.docId}{e.spanId ? ` / ${e.spanId}` : ''}</>}
+            {'  '}<span className="muted">[{e.scope}]</span>
+          </li>
+        ))}
+      </ol>
+    </details>
   );
 }
