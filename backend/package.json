@@ -1,15 +1,20 @@
 {
   "name": "sprintfour-backend",
-  "version": "1.0.0",
-  "description": "PII triage tool backend",
+  "version": "2.0.0",
+  "private": true,
+  "description": "API and ingestion pipeline for the SprintFour PII triage tool",
   "main": "server.js",
+  "engines": {
+    "node": ">=20.19"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "generate": "node ../data/seed/generateDataset.js"
+    "test": "node --test test/*.test.js",
+    "generate": "node scripts/generateDataset.js",
+    "reset": "node -e \"require('fs').rmSync('var', { recursive: true, force: true })\""
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^5.2.1"
   }
 }

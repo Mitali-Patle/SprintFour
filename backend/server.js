@@ -1,26 +1,21 @@
 'use strict';
 
-const express = require('express');
-const cors    = require('cors');
-const store   = require('./store');
+const fs = require('fs');
 
-const docsRouter  = require('./routes/documents');
-const auditRouter = require('./routes/audit');
+const config                  = require('./src/config');
+const { createApp }           = require('./src/app');
+const { createAuditLog }      = require('./src/auditLog');
+const { createReviewService } = require('./src/reviewService');
 
-const app  = express();
-const PORT = process.env.PORT || 4000;
+const documents = JSON.parse(fs.readFileSync(config.datasetPath, 'utf8'));
+const service   = createReviewService({ documents, auditLog: createAuditLog(config.auditLogPath) });
+const app       = createApp({ service, staticDir: config.staticDir });
 
-app.use(cors());
-app.use(express.json());
-
-const count = store.load();
-
-app.use('/api/documents', docsRouter);
-app.use('/api/audit',     auditRouter);
-
-app.get('/api/health', (_req, res) => res.json({ ok: true, docCount: count }));
-
-app.listen(PORT, () => {
-  console.log(`PII triage backend running on http://localhost:${PORT}`);
-  console.log(`Loaded ${count} documents from dataset.json`);
+const server = app.listen(config.port, () => {
+  console.log(`PII triage API listening on http://localhost:${config.port}`);
+  console.log(`Loaded ${documents.length} documents · audit log: ${config.auditLogPath}`);
 });
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => server.close(() => process.exit(0)));
+}

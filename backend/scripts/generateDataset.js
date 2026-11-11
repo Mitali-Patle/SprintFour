@@ -17,14 +17,48 @@
  * identities used only in the 5 hand-crafted hero documents.
  *
  * Offsets come exclusively from regex matches (m.index) — never hardcoded.
+ *
+ * Deterministic: all randomness comes from a seeded PRNG, so the same seed
+ * always reproduces the same dataset byte-for-byte.
+ *
+ *   npm run generate                # default seed
+ *   npm run generate -- --seed 42   # a different, still reproducible, dataset
  */
 
 const fs   = require('fs');
 const path = require('path');
 
-const { detect }      = require('../../backend/detection/mockDetector');
-const { recallPass }  = require('../../backend/recall/recallPass');
-const { computeTier } = require('../../backend/triage/tierEngine');
+const { analyzeDocument } = require('../src/pipeline');
+
+const DATA_DIR = path.resolve(__dirname, '../../data');
+
+// ─────────────────────────────────────────────────────────────
+// 0.  SEEDED PRNG (mulberry32)
+// ─────────────────────────────────────────────────────────────
+
+const DEFAULT_SEED = 4;
+
+function parseSeed(argv) {
+  const i = argv.indexOf('--seed');
+  if (i === -1) return DEFAULT_SEED;
+  const seed = Number(argv[i + 1]);
+  if (!Number.isInteger(seed)) throw new Error('--seed expects an integer');
+  return seed;
+}
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const SEED   = parseSeed(process.argv.slice(2));
+const random = mulberry32(SEED);
 
 // ─────────────────────────────────────────────────────────────
 // 1.  RANDOM DATA GENERATORS
@@ -121,8 +155,8 @@ const BANKS = ['Chase Bank', 'Bank of America', 'Wells Fargo', 'Citibank', 'PNC 
 const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June',
                      'July', 'August', 'September', 'October', 'November', 'December'];
 
-function pick(arr)  { return arr[Math.floor(Math.random() * arr.length)]; }
-function rnd(n)     { return Math.floor(Math.random() * n); }
+function pick(arr)  { return arr[Math.floor(random() * arr.length)]; }
+function rnd(n)     { return Math.floor(random() * n); }
 function pad(n, w)  { return String(n).padStart(w, '0'); }
 
 function randName() {
@@ -820,19 +854,13 @@ function assignEntityIds(spans, entity) {
 
 // ─────────────────────────────────────────────────────────────
 // 7.  SINGLE-DOCUMENT PROCESSOR
-//     detect → recall → tier → assign entityIds
+//     detect → recall → tier (shared pipeline), then link entityIds
 // ─────────────────────────────────────────────────────────────
 
 function processDoc({ id, title, category, text, entity }) {
-  const detectorSpans = detect(text, id);
-  const recallSpans   = recallPass(text, detectorSpans, id, detectorSpans.length);
-  const allSpans      = [...detectorSpans, ...recallSpans];
-
-  assignEntityIds(allSpans, entity);
-
-  const { status, confidence, tierReason } = computeTier(allSpans);
-
-  return { id, title, category, text, status, confidence, tierReason, spans: allSpans };
+  const { tier, confidence, tierReason, spans } = analyzeDocument(id, text);
+  assignEntityIds(spans, entity);
+  return { id, title, category, text, tier, confidence, tierReason, spans };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -899,43 +927,37 @@ function generate() {
 const { heroDocs, generated } = generate();
 const dataset = [...heroDocs, ...generated];
 
-const heroPath    = path.join(__dirname, '../hero-docs.json');
-const datasetPath = path.join(__dirname, '../dataset.json');
+const heroPath    = path.join(DATA_DIR, 'hero-docs.json');
+const datasetPath = path.join(DATA_DIR, 'dataset.json');
 
-fs.writeFileSync(heroPath,    JSON.stringify(heroDocs, null, 2));
-fs.writeFileSync(datasetPath, JSON.stringify(dataset,  null, 2));
+fs.writeFileSync(heroPath,    JSON.stringify(heroDocs, null, 2) + '\n');
+fs.writeFileSync(datasetPath, JSON.stringify(dataset,  null, 2) + '\n');
 
 // ── Report ───────────────────────────────────────────────────
 function tally(docs) {
   const counts = { green: 0, yellow: 0, red: 0 };
-  for (const d of docs) counts[d.status]++;
+  for (const d of docs) counts[d.tier]++;
   return counts;
 }
 
-const hc = tally(heroDocs);
-const gc = tally(generated);
-const dc = tally(dataset);
-
-console.log(`\nHero docs (${heroDocs.length}):     green=${hc.green}  yellow=${hc.yellow}  red=${hc.red}`);
-console.log(`Generated  (${generated.length}): green=${gc.green}  yellow=${gc.yellow}  red=${gc.red}`);
-console.log(`─────────────────────────────────────────────────────`);
-console.log(`Total      (${dataset.length}): green=${dc.green}  yellow=${dc.yellow}  red=${dc.red}`);
-
+const hc  = tally(heroDocs);
+const gc  = tally(generated);
+const dc  = tally(dataset);
 const pct = n => ((n / dataset.length) * 100).toFixed(1);
+
+console.log(`Seed ${SEED}`);
+console.log(`Hero docs  (${heroDocs.length}):   green=${hc.green}  yellow=${hc.yellow}  red=${hc.red}`);
+console.log(`Generated  (${generated.length}): green=${gc.green}  yellow=${gc.yellow}  red=${gc.red}`);
+console.log(`Total      (${dataset.length}): green=${dc.green}  yellow=${dc.yellow}  red=${dc.red}`);
 console.log(`Distribution: ${pct(dc.green)}% green / ${pct(dc.yellow)}% yellow / ${pct(dc.red)}% red`);
 
-// Entity occurrence counts for the recurring pool
-console.log(`\nRecurring entity appearances in generated docs:`);
+console.log('\nRecurring entity appearances in generated docs:');
 for (const e of RECURRING_POOL) {
-  const count = generated.reduce((n, doc) =>
-    n + doc.spans.filter(s => s.entityId && s.entityId.startsWith(e.entityId)).length > 0 ? 1 : 0
-  , 0);
-  // Count docs that reference this entity
   const docCount = generated.filter(doc =>
     doc.spans.some(s => s.entityId && s.entityId.startsWith(e.entityId))
   ).length;
   console.log(`  ${e.entityId.padEnd(22)} → ${docCount} documents`);
 }
 
-console.log(`\n→ hero-docs.json: ${heroPath}`);
-console.log(`→ dataset.json:   ${datasetPath}`);
+console.log(`\n→ ${path.relative(process.cwd(), heroPath)}`);
+console.log(`→ ${path.relative(process.cwd(), datasetPath)}`);
