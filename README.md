@@ -14,6 +14,12 @@ can be cleared in bulk without being opened.
 
 Built for the SprintFour hackathon (Problem 2: volume).
 
+![Triage dashboard: documents sorted by risk, with low-risk ones offered for bulk clearing](docs/screenshots/dashboard.png)
+
+| Review panel | Propagation preview |
+|---|---|
+| ![Document text with highlighted PII next to the suggestion list](docs/screenshots/review.png) | ![Confirmation dialog showing how many spans and documents a decision will update](docs/screenshots/propagate.png) |
+
 ---
 
 ## Highlights
@@ -93,10 +99,15 @@ npm start                # builds the frontend, then serves app + API on http://
 | Command            | What it does                                                        |
 |--------------------|---------------------------------------------------------------------|
 | `npm test`         | Backend test suite (pipeline, review rules, HTTP API, dataset invariants) |
+| `npm run test:e2e` | Playwright end-to-end tests against the production build and real API |
 | `npm run lint`     | Frontend lint (oxlint, zero warnings allowed)                       |
 | `npm run check`    | Test + lint + build, the same as CI                                 |
+| `npm run screenshots` | Regenerate the README screenshots in `docs/screenshots/`         |
 | `npm run generate` | Regenerate `data/dataset.json` (`-- --seed 42` for another dataset) |
 | `npm run reset`    | Delete the audit log, which resets all review progress              |
+
+The end-to-end tests need a browser once: `npx --prefix frontend playwright install chromium`
+(or point `PW_CHROMIUM_PATH` at an installed Chrome).
 
 Configuration is read from environment variables: `PORT`, `DATASET_PATH`,
 `AUDIT_LOG_PATH` (default `backend/var/audit.log`) and `STATIC_DIR`.
@@ -123,6 +134,8 @@ frontend/src/
   hooks/useKeyboardShortcuts.js
   lib/                       shared display metadata and suggestion ordering
   services/api.js            API client with structured errors
+frontend/e2e/                Playwright end-to-end tests + screenshot generator
+docs/screenshots/            README images (npm run screenshots)
 ```
 
 ## Document lifecycle
