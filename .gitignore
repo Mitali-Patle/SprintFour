@@ -1,0 +1,23 @@
+# Dependencies & builds
+node_modules/
+dist/
+dist-ssr/
+
+# Runtime state (review decisions; delete to reset the demo)
+backend/var/
+*.log
+npm-debug.log*
+
+# Env & local files
+.env
+.env.*
+!.env.example
+*.local
+
+# Editors & OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.sw?
+.~lock.*#

@@ -1,0 +1,20 @@
+{
+  "name": "sprintfour",
+  "private": true,
+  "description": "Reviewer-first PII redaction triage tool",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "install:all": "npm ci --prefix backend && npm ci --prefix frontend",
+    "dev:api": "npm run dev --prefix backend",
+    "dev:web": "npm run dev --prefix frontend",
+    "test": "npm test --prefix backend",
+    "lint": "npm run lint --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run build && npm start --prefix backend",
+    "generate": "npm run generate --prefix backend",
+    "reset": "npm run reset --prefix backend",
+    "check": "npm test && npm run lint && npm run build"
+  }
+}
